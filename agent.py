@@ -20,7 +20,7 @@ def greeting(self):
     # TODO: Write a short greeting message                                 #
     ########################################################################
 
-    greeting_message = "Hi! I'm your movie ticket assistant. I can recommend movies, check showtimes, and help you book tickets. How can I help you today?"
+    greeting_message = "Hi, I'm your movie ticket assistant! I can recommend movies, check showtimes, and help you book tickets. How can I help you today?"
 
     ########################################################################
     #                             END OF YOUR CODE                         #
@@ -638,17 +638,23 @@ class EnhancedMovieTicketAgent(dspy.Module):
         # if they are enabled
         ########################################################################
         # TODO: Add tools for the base agent
-        self.tools = []
+        self.tools = [recommend_movies, general_qa, find_time, find_price, find_balance, book_ticket, file_request]
 
         # enable web search
         if self.web_tools: 
             # TODO: add web search tool to self.tools and delete `pass`
-            pass
+            self.tools.append(self.web_tools.web_search)
         
         # add memory tools if enabled
         if self.memory_tools:
             # TODO: add the relevant memory tools here and delete `pass`
-            pass
+            self.tools.extend([
+                self.memory_tools.store_memory,
+                self.memory_tools.search_memories,
+                self.memory_tools.get_all_memories,
+                self.memory_tools.update_memory,
+                self.memory_tools.delete_memory,
+            ])
        
         ########################################################################
         #                          END OF YOUR CODE                            #
@@ -665,4 +671,4 @@ class EnhancedMovieTicketAgent(dspy.Module):
         return self.react(user_request=user_request)
 
 
-enhanced_agent = EnhancedMovieTicketAgent(enable_web_search=True, enable_memory=True)
+enhanced_agent = EnhancedMovieTicketAgent(enable_web_search=True, enable_memory=False)
