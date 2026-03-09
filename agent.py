@@ -390,7 +390,11 @@ class WebTools:
 
     def web_search(self, query: str, num_results: int = 5, page: int = 1) -> str:
         """
-        Search the web and return top links/snippets.
+        Search the web for current movie-related information.
+
+        Use this tool for release dates, cast, directors, sequels, and other
+        up-to-date movie facts.
+
         Args:
           query: search query string
           num_results: number of results to return (recommended <= 10)
@@ -464,6 +468,8 @@ memory_config = {
 class MemoryTools:
     """Tools for interacting with the Mem0 memory system."""
 
+    DEFAULT_USER_ID = "default_user"
+
     def __init__(self, memory: Memory):
         self.memory = memory
 
@@ -487,7 +493,10 @@ class MemoryTools:
             # Hint: It may be helpful to review mem0's memory operations here:
             # https://docs.mem0.ai/core-concepts/memory-operations
             ########################################################################
-            pass
+            self.memory.add(
+                [{"role":"user", "content": content}],
+                user_id=self.DEFAULT_USER_ID
+            )
             ########################################################################
             #                          END OF YOUR CODE                            #
             ########################################################################
@@ -513,6 +522,11 @@ class MemoryTools:
         This is used when the agent needs to recall previously stored information,
         such as user preferences or earlier statements.
 
+        Use this when the user asks:
+        - what is my favorite ...
+        - what did I tell you before ...
+        - when did I ...
+
         Args:
             query (str): Natural-language search query.
             user_id (str): Identifier for the user whose memory should be searched.
@@ -528,11 +542,11 @@ class MemoryTools:
             # Hint: it would be helpful to read the documentation of 
             # mem0 to see how to use the `search` method: https://github.com/mem0ai/mem0
             ########################################################################
-            results = None
+            results = self.memory.search(query=query, user_id=self.DEFAULT_USER_ID, limit=limit)
             ########################################################################
             #                          END OF YOUR CODE                            #
             ########################################################################
-            if not results:
+            if not results or "results" not in results or len(results["results"]) == 0:
                 return "No relevant memories found."
             memory_text = self.create_memory(results)
             return memory_text
@@ -540,10 +554,13 @@ class MemoryTools:
             return f"Error searching memories: {str(e)}"
 
     def get_all_memories(self, user_id: str = "default_user") -> str:
-        """Get all memories for a user."""
+        """
+        Get all memories for a user.
+        Use this when the user asks what you remember about them.
+        """
         try:
-            results = self.memory.get_all(user_id=user_id)
-            if not results:
+            results = self.memory.get_all(user_id=self.DEFAULT_USER_ID)
+            if not results or "results" not in results or len(results["results"]) == 0:
                 return "No memories found for this user."
 
             memory_text = self.create_memory(results)
@@ -559,7 +576,7 @@ class MemoryTools:
             # Hint: It may be helpful to review mem0's memory operations here:
             # https://docs.mem0.ai/core-concepts/memory-operations
             ########################################################################
-            pass
+            self.memory.update(memory_id=memory_id, data=new_content)
             ########################################################################
             #                          END OF YOUR CODE                            #
             ########################################################################
@@ -575,7 +592,7 @@ class MemoryTools:
             # Hint: It may be helpful to review mem0's memory operations here:
             # https://docs.mem0.ai/core-concepts/memory-operations
             ########################################################################
-            pass
+            self.memory.delete(memory_id=memory_id)
             ########################################################################
             #                          END OF YOUR CODE                            #
             ########################################################################
@@ -615,9 +632,18 @@ class EnhancedMovieTicketAgent(dspy.Module):
     and various tools to handle user requests. You should decide the right tool to use in order to
     fulfill users' request.
     
-    When users share preferences or information, store it in memory.
-    When you need to recall user preferences, search memories.
-    When you need current movie information, use web search."""
+    Use memory tools whenever the user shares personal preferences, facts, or
+    past experiences that may be useful later.
+
+    Rules:
+    - If the user says 'remember', 'my favorite', 'I like', 'I prefer', or shares
+      a personal fact or preference, use store_memory.
+    - If the user asks 'what is my favorite ...', 'what do you remember about me',
+      or asks about something they told you before, use search_memories or
+      get_all_memories.
+    - Use web_search for current or up-to-date movie information.
+    - Do not use general_qa when the answer should come from memory.
+    """
 
     def __init__(self, enable_web_search=True, enable_memory=True):
         super().__init__()
@@ -661,7 +687,7 @@ class EnhancedMovieTicketAgent(dspy.Module):
         ########################################################################
         # Initialize ReAct agent
         self.react = dspy.ReAct(
-            MovieTicketAgent,
+            EnhancedMovieTicketSignature,
             tools=self.tools,
             max_iters=6
         )
@@ -670,5 +696,41 @@ class EnhancedMovieTicketAgent(dspy.Module):
         """Process user input with enhanced capabilities."""
         return self.react(user_request=user_request)
 
+class EnhancedMovieTicketSignature(dspy.Signature):
+    """
+    You are a movie ticket agent with access to movie recommendation tools,
+    ticket-booking tools, web search, and long-term memory.
 
-enhanced_agent = EnhancedMovieTicketAgent(enable_web_search=True, enable_memory=False)
+    Choose the correct tool based on the user's request.
+
+    Rules:
+    - If the user shares a preference, favorite, personal fact, or past experience,
+      use store_memory.
+      Examples:
+      - "my favorite genre is sci-fi"
+      - "my favorite movie is The Matrix"
+      - "I watched my first sci-fi movie when I was 6"
+      - "remember that I prefer evening showtimes"
+
+    - If the user asks about something they told you before, use search_memories.
+      Examples:
+      - "what is my favorite movie?"
+      - "what is my favorite genre?"
+      - "when did I watch my first sci-fi movie?"
+
+    - If the user asks what you remember about them, use get_all_memories.
+
+    - Use web_search for current or up-to-date movie information such as:
+      release dates, actors, directors, upcoming movies, and recent news.
+
+    - Do NOT use general_qa when the answer should come from memory.
+    - Do NOT use recommend_movies when the user is simply stating a preference.
+    - Once the request is fulfilled, finish and provide a short final answer.
+    """
+    user_request: str = dspy.InputField()
+    process_result: str = dspy.OutputField(
+        desc="Final concise answer to the user."
+    )
+
+
+enhanced_agent = EnhancedMovieTicketAgent(enable_web_search=True, enable_memory=True)
