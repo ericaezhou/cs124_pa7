@@ -278,9 +278,9 @@ def book_ticket(user_name: str, movie_title: str):
 
     ticket_database[ticket_number] = Ticket(
         ticket_number=ticket_number,
-        user_name=user_name,
+        user_name=user_profile.name,
         movie_title=movie_title,
-        showtime=movie.start_time,
+        time=movie.start_time,
         price=movie.price,
     )
     ########################################################################
@@ -411,7 +411,7 @@ class WebTools:
         # Parameters passed to the SerpAPI search endpoint.
         # We use Bing here, but SerpAPI supports multiple search engines.
         params = {
-            "engine": "bing",
+            "engine": "google",
             "q": query,
             "api_key": self.serpapi_key,
             "count": num_results,
@@ -429,8 +429,24 @@ class WebTools:
                 title = item.get("title") or "(no title)"
                 link = item.get("link") or "(no link)"
                 snippet = item.get("snippet") or ""
-                # Each result is formatted as a numbered block
-                lines.append(f"{i}. {title}\n   {link}\n   {snippet}".strip())
+                
+                page_text = ""
+            if link != "(no link)":
+                try:
+                    response = requests.get(link, timeout=5, headers={
+                        "User-Agent": "Mozilla/5.0"
+                    })
+                    if response.ok:
+                        page_text = extract_text(response.text)[:1000]
+                except Exception:
+                    page_text = ""
+
+            lines.append(f"{i}. {title}")
+            lines.append(f"   Link: {link}")
+            if snippet:
+                lines.append(f"   Snippet: {snippet}")
+            if page_text:
+                lines.append(f"   Page text: {page_text}")
 
             return "\n".join(lines)
 
