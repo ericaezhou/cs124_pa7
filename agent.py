@@ -495,7 +495,7 @@ class MemoryTools:
             ########################################################################
             self.memory.add(
                 [{"role":"user", "content": content}],
-                user_id=self.DEFAULT_USER_ID
+                user_id=user_id
             )
             ########################################################################
             #                          END OF YOUR CODE                            #
@@ -542,7 +542,7 @@ class MemoryTools:
             # Hint: it would be helpful to read the documentation of 
             # mem0 to see how to use the `search` method: https://github.com/mem0ai/mem0
             ########################################################################
-            results = self.memory.search(query=query, user_id=self.DEFAULT_USER_ID, limit=limit)
+            results = self.memory.search(query=query, user_id=user_id, limit=limit)
             ########################################################################
             #                          END OF YOUR CODE                            #
             ########################################################################
@@ -559,7 +559,7 @@ class MemoryTools:
         Use this when the user asks what you remember about them.
         """
         try:
-            results = self.memory.get_all(user_id=self.DEFAULT_USER_ID)
+            results = self.memory.get_all(user_id=user_id)
             if not results or "results" not in results or len(results["results"]) == 0:
                 return "No memories found for this user."
 

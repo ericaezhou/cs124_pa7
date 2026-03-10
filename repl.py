@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 
 from util import load_together_client, stream_llm_to_console, DEFAULT_STOP
 from agent import react_agent, enhanced_agent
-from agent import user_database, showtime_database, ticket_database, request_database  
+from agent import user_database, showtime_database, ticket_database, request_database
+
+from extra_credit import ExtraCreditAgent
 
 import pprint
 
@@ -59,7 +61,7 @@ class REPL(cmd.Cmd):
     def __init__(self):
         super().__init__()
 
-        self.agent = enhanced_agent # TODO: replace with enhanced_agent to test the enhanced agent
+        self.agent = ExtraCreditAgent()
         self.name = "Movie Ticket Agent"
         self.bot_prompt = '\001\033[96m\002%s> \001\033[0m\002' % self.name
         self.intro = '\n' + self.bot_prompt + \
